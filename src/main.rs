@@ -1,8 +1,10 @@
+mod ss;
+mod list;
 mod server;
 
-use std::{path::PathBuf, sync::atomic::AtomicBool};
+use std::path::PathBuf;
 
-use cote::{*};
+use cote::*;
 use rustyline::{error::ReadlineError, DefaultEditor};
 
 #[derive(Debug, Cote)]
@@ -19,29 +21,30 @@ fn main() -> color_eyre::Result<()> {
     let prompt = format!("♫|{}|>", user);
     let mut rl = DefaultEditor::new()?;
 
-    if rl.load_history(&args.history).is_err() {
-        eprintln!("No history found!");
-    }
+    rl.load_history(&args.history)?;
     loop {
         let line = rl.readline(&prompt);
 
         match line {
             Ok(line) => {
+                rl.add_history_entry(line.clone())?;
+
                 let args = line.split_whitespace();
                 let args = args.collect::<Vec<&str>>();
                 let command = args.get(0).cloned();
 
                 match command {
-                    Some("start") => {
-                        if let Some(start) = process_start(&args)? {
+                    Some("start") => match process_start(&args) {
+                        Ok(start) => {
                             dbg!(start);
                         }
+                        Err(e) => eprintln!("Failed invoke start command: {e:?}"),
                     },
                     _ => {
                         println!("Got unknown commands: {:?}", args);
-                    },
+                    }
                 }
-            },
+            }
             Err(ReadlineError::Interrupted) => {
                 break;
             }
@@ -51,6 +54,7 @@ fn main() -> color_eyre::Result<()> {
             }
         }
     }
+    rl.save_history(&args.history)?;
     Ok(())
 }
 
@@ -111,23 +115,39 @@ pub struct Start {
 }
 
 pub fn process_start<'a>(args: &[&str]) -> color_eyre::Result<Option<Start>> {
-    let args = Args::from(args.iter().map(|v|*v));
-    let CoteRes { mut policy, mut ret, mut parser } = Start::parse_args(args)?;
+    let args = Args::from(args.iter().map(|v| *v));
+    let CoteRes {
+        mut policy,
+        mut ret,
+        mut parser,
+    } = Start::parse_args(args)?;
 
     if ret.status() {
-        let help = parser.find_val::<bool>("--help")?;
-
-        if *help {
-            let help = StartInternalApp { parser: Some(&mut parser), policy: Some(&mut policy) };
-
-            help.display_help()?;
+        if ss_display_help!(parser, policy, StartInternalApp) {
             Ok(None)
-        }
-        else {
+        } else {
             Ok(Some(Start::try_extract(parser.optset_mut())?))
         }
-    }
-    else {
+    } else {
         Err(ret.take_failure())?
     }
+}
+
+#[macro_export]
+macro_rules! ss_display_help {
+    ($parser:ident, $policy:ident, $internal:tt) => {{
+        let help = $parser.find_val::<bool>("--help")?;
+
+        if *help {
+            let help = $internal {
+                parser: Some(&mut $parser),
+                policy: Some(&mut $policy),
+            };
+
+            help.display_help()?;
+            true
+        } else {
+            false
+        }
+    }};
 }

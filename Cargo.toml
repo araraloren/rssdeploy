@@ -11,14 +11,10 @@ categories = ["command-line-interface"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-color-eyre = "0.6.2"
-cote = "0.4.3"
-rustyline = "12.0.0"
-serde = { version = "1.0.183", features = ["derive"] }
-serde_json = "1.0.105"
-whoami = "1.4.1"
-
-[patch.crates-io]
-cote = {path = "../getopt-rs/cote"}
-aopt = { path = "../getopt-rs/aopt" }
-cote-derive = { path = "../getopt-rs/cote-derive" }
+color-eyre = "0.6"
+cote = "0.4"
+rustyline = "12.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+symlink = "0.1.0"
+whoami = "1.4"
