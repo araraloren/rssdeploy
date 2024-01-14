@@ -1,0 +1,58 @@
+[
+    {
+        "bin": "~/.cargo/bin/ssserver",
+        "kcp": "~/.cargo/bin/kcptun",
+        "err_log": "/var/log/shadowsocks/config_27607_err.log",
+        "out_log": "/var/log/shadowsocks/config_27607_out.log",
+        "kcp_log": "/var/log/shadowsocks/config_27607_kcp.log",
+        "cfg": {
+            "server": "0.0.0.0",
+            "server_port": 27607,
+            "password": "hdash546154!@#!@%$",
+            "timeout": 300,
+            "method": "ChaCha20IetfFPoly1305",
+            "fast_open": false
+        },
+        "kcp_cfg": {
+            "server": "127.0.0.1",
+            "crypt": "Aes",
+            "key": "iwantmoremorefastagain",
+            "send_wnd": 2048,
+            "recv_wnd": 2048,
+            "mtu": 1400,
+            "mode": "Fast2",
+            "dscp": 46,
+            "data_shard": 30,
+            "parity_shard": 15,
+            "comp": false
+        }
+    },
+    {
+        "bin": "~/.cargo/bin/ssserver",
+        "kcp": "~/.cargo/bin/kcptun",
+        "err_log": "/var/log/shadowsocks/config_27611_err.log",
+        "out_log": "/var/log/shadowsocks/config_27611_out.log",
+        "kcp_log": "/var/log/shadowsocks/config_27611_kcp.log",
+        "cfg": {
+            "server": "0.0.0.0",
+            "server_port": 27611,
+            "password": "899cc*h54^%&!@6154!00",
+            "timeout": 300,
+            "method": "Blake3ChaCha20Poly1305_2022",
+            "fast_open": false
+        },
+        "kcp_cfg": {
+            "server": "127.0.0.1",
+            "crypt": "Aes",
+            "key": "iwantmoremorefastagain",
+            "send_wnd": 2048,
+            "recv_wnd": 2048,
+            "mtu": 1400,
+            "mode": "Fast2",
+            "dscp": 46,
+            "data_shard": 30,
+            "parity_shard": 15,
+            "comp": false
+        }
+    }
+]
