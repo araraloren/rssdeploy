@@ -10,7 +10,8 @@ use cote::*;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::to_string_pretty;
-
+use prettytable::Row;
+use prettytable::Table;
 use crate::kill::Kill;
 use crate::kill::KillInternalApp;
 use crate::list::List;
