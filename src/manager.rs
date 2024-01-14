@@ -7,11 +7,6 @@ use std::process::Command;
 use color_eyre::eyre::Report;
 use cote::*;
 
-use serde::Deserialize;
-use serde::Serialize;
-use serde_json::to_string_pretty;
-use prettytable::Row;
-use prettytable::Table;
 use crate::kill::Kill;
 use crate::kill::KillInternalApp;
 use crate::list::List;
@@ -21,6 +16,11 @@ use crate::load::LoaderInternalApp;
 use crate::ss_display_help;
 use crate::start::Start;
 use crate::start::StartInternalApp;
+use prettytable::Row;
+use prettytable::Table;
+use serde::Deserialize;
+use serde::Serialize;
+use serde_json::to_string_pretty;
 
 #[derive(PartialEq, Eq, Clone, Copy, Serialize, Deserialize, Debug, Default, CoteVal, CoteOpt)]
 pub enum Method {
