@@ -36,7 +36,7 @@
         "cfg": {
             "server": "0.0.0.0",
             "server_port": 1,
-            "password": "password",
+            "password": "32 bytes base64 password",
             "timeout": 300,
             "method": "Blake3ChaCha20Poly1305_2022",
             "fast_open": false

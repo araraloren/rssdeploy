@@ -454,13 +454,24 @@ impl Manager {
     pub fn invoke_kill_cmd(&mut self, args: &[&str]) -> color_eyre::Result<()> {
         let args = Args::from(args.iter().copied());
         let kill = Kill::parse(args)?;
-        let inst = self
-            .instances
-            .get_mut(kill.index)
-            .ok_or_else(|| Report::msg("Index out of bound, no instance found"))?;
 
-        inst.ss.kill()?;
-        inst.kcp.as_mut().map(|v| v.kill()).transpose()?;
+        if kill.all {
+            for inst in self.instances.iter_mut() {
+                inst.ss.kill()?;
+                inst.kcp.as_mut().map(|v| v.kill()).transpose()?;
+            }
+            self.instances.clear();
+        } else {
+            let index = kill.index.unwrap();
+            let inst = self
+                .instances
+                .get_mut(index)
+                .ok_or_else(|| Report::msg("Index out of bound, no instance found"))?;
+
+            inst.ss.kill()?;
+            inst.kcp.as_mut().map(|v| v.kill()).transpose()?;
+            self.instances.remove(index);
+        }
 
         Ok(())
     }
