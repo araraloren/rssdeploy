@@ -10,6 +10,10 @@ pub struct Start {
     #[arg(valid = valid!(|v: &PathBuf| v.exists()))]
     pub bin: Option<PathBuf>,
 
+    /// Set the path of shadowsocks configuration
+    #[arg(alias = "-c")]
+    pub config: Option<PathBuf>,
+
     /// Set the listen port of ssserver
     #[arg(alias = "-p")]
     pub port: Option<u32>,

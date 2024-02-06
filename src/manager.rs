@@ -90,11 +90,11 @@ pub enum KcpMode {
 impl ToString for KcpMode {
     fn to_string(&self) -> String {
         String::from(match self {
-            KcpMode::Fast3 => "Fast3",
-            KcpMode::Fast2 => "Fast2",
-            KcpMode::Fast => "Fast",
-            KcpMode::Normal => "Normal",
-            KcpMode::Manual => "Manual",
+            KcpMode::Fast3 => "fast3",
+            KcpMode::Fast2 => "fast2",
+            KcpMode::Fast => "fast",
+            KcpMode::Normal => "normal",
+            KcpMode::Manual => "manual",
         })
     }
 }
@@ -197,29 +197,42 @@ impl Config {
         let bin = start.bin.as_ref().unwrap_or(&self.bin);
         let bin = shellexpand::path::full(bin.as_path())?;
         let mut cmd = Command::new(&*bin);
+        let ss_port;
 
-        let ss_port = start.port.unwrap_or(cfg.port);
-        let server = format!("{}:{}", &cfg.server, ss_port);
-        let password = start.password.as_ref().unwrap_or(&cfg.password);
-        let timeout = start.timeout.unwrap_or(cfg.timeout);
-        let method = start.method.unwrap_or(cfg.method);
-        let fast_open = start.fast_open || cfg.fast_open;
+        if let Some(config) = start.config.as_ref() {
+            let config = shellexpand::path::full(config.as_path())?;
+            let path = &*config;
+
+            cmd.arg("-c").arg(path.to_str().unwrap_or_default());
+            // read port
+            let ss_config: SsConfig = serde_json::from_str(&read_to_string(path).await?)?;
+
+            ss_port = ss_config.port;
+        } else {
+            ss_port = start.port.unwrap_or(cfg.port);
+            let server = format!("{}:{}", &cfg.server, ss_port);
+            let password = start.password.as_ref().unwrap_or(&cfg.password);
+            let timeout = start.timeout.unwrap_or(cfg.timeout);
+            let method = start.method.unwrap_or(cfg.method);
+            let fast_open = start.fast_open || cfg.fast_open;
+
+            cmd.arg("-s")
+                .arg(server)
+                .arg("-k")
+                .arg(password)
+                .arg("-m")
+                .arg(method.to_string())
+                .arg("--timeout")
+                .arg(timeout.to_string());
+            if fast_open {
+                cmd.arg("--tcp-fast-open");
+            }
+        }
         let out_log = start.out_log.as_ref().or(self.out_log.as_ref());
         let out_log = out_log.and_then(|v| shellexpand::path::full(v).ok());
         let err_log = start.err_log.as_ref().or(self.err_log.as_ref());
         let err_log = err_log.and_then(|v| shellexpand::path::full(v).ok());
 
-        cmd.arg("-s")
-            .arg(server)
-            .arg("-k")
-            .arg(password)
-            .arg("-m")
-            .arg(method.to_string())
-            .arg("--timeout")
-            .arg(timeout.to_string());
-        if fast_open {
-            cmd.arg("--tcp-fast-open");
-        }
         if let Some(out_log) = out_log {
             if let Some(out_log) = out_log.parent() {
                 create_dir_all(out_log).await?
