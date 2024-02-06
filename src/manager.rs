@@ -180,11 +180,11 @@ pub struct Config {
 
     kcp: PathBuf,
 
-    err_log: PathBuf,
+    err_log: Option<PathBuf>,
 
-    out_log: PathBuf,
+    out_log: Option<PathBuf>,
 
-    kcp_log: PathBuf,
+    kcp_log: Option<PathBuf>,
 
     cfg: SsConfig,
 
@@ -204,10 +204,10 @@ impl Config {
         let timeout = start.timeout.unwrap_or(cfg.timeout);
         let method = start.method.unwrap_or(cfg.method);
         let fast_open = start.fast_open || cfg.fast_open;
-        let out_log = start.out_log.as_ref().unwrap_or(&self.out_log);
-        let out_log = shellexpand::path::full(out_log.as_path())?;
-        let err_log = start.err_log.as_ref().unwrap_or(&self.err_log);
-        let err_log = shellexpand::path::full(err_log.as_path())?;
+        let out_log = start.out_log.as_ref().or(self.out_log.as_ref());
+        let out_log = out_log.and_then(|v| shellexpand::path::full(v).ok());
+        let err_log = start.err_log.as_ref().or(self.err_log.as_ref());
+        let err_log = err_log.and_then(|v| shellexpand::path::full(v).ok());
 
         cmd.arg("-s")
             .arg(server)
@@ -220,27 +220,31 @@ impl Config {
         if fast_open {
             cmd.arg("--tcp-fast-open");
         }
-        if let Some(out_log) = out_log.parent() {
-            create_dir_all(out_log).await?
+        if let Some(out_log) = out_log {
+            if let Some(out_log) = out_log.parent() {
+                create_dir_all(out_log).await?
+            }
+            cmd.stdout(
+                std::fs::File::options()
+                    .write(true)
+                    .truncate(true)
+                    .create(true)
+                    .open(out_log)?,
+            );
         }
-        if let Some(err_log) = err_log.parent() {
-            create_dir_all(err_log).await?
-        }
-        cmd.stdout(
-            std::fs::File::options()
-                .write(true)
-                .truncate(true)
-                .create(true)
-                .open(out_log)?,
-        );
-        cmd.stderr(
-            std::fs::File::options()
-                .write(true)
-                .truncate(true)
-                .create(true)
-                .open(err_log)?,
-        );
+        if let Some(err_log) = err_log {
+            if let Some(err_log) = err_log.parent() {
+                create_dir_all(err_log).await?
+            }
 
+            cmd.stderr(
+                std::fs::File::options()
+                    .write(true)
+                    .truncate(true)
+                    .create(true)
+                    .open(err_log)?,
+            );
+        }
         dbg!(&cmd);
 
         let ss = cmd.spawn()?;
@@ -263,8 +267,8 @@ impl Config {
                 let mode = start.mode.unwrap_or(cfg.mode);
                 let mtu = start.mtu.unwrap_or(cfg.mtu);
                 let no_comp = !start.compress || cfg.comp;
-                let kcp_log = start.kcp_log.as_ref().unwrap_or(&self.kcp_log);
-                let kcp_log = shellexpand::path::full(kcp_log.as_path())?;
+                let kcp_log = start.kcp_log.as_ref().or(self.kcp_log.as_ref());
+                let kcp_log = kcp_log.and_then(|v| shellexpand::path::full(v).ok());
 
                 cmd.arg("-l")
                     .arg(format!(":{}", kcp_port))
@@ -291,16 +295,18 @@ impl Config {
                 if no_comp {
                     cmd.arg("-nocomp");
                 }
-                if let Some(kcp_log) = kcp_log.parent() {
-                    create_dir_all(kcp_log).await?
+                if let Some(kcp_log) = kcp_log {
+                    if let Some(kcp_log) = kcp_log.parent() {
+                        create_dir_all(kcp_log).await?
+                    }
+                    cmd.stderr(
+                        std::fs::File::options()
+                            .write(true)
+                            .truncate(true)
+                            .create(true)
+                            .open(kcp_log)?,
+                    );
                 }
-                cmd.stderr(
-                    std::fs::File::options()
-                        .write(true)
-                        .truncate(true)
-                        .create(true)
-                        .open(kcp_log)?,
-                );
                 kcp = Some(cmd.spawn()?);
             }
         }
