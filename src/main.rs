@@ -17,7 +17,8 @@ pub struct Readline {
     history: PathBuf,
 }
 
-fn main() -> color_eyre::Result<()> {
+#[tokio::main]
+async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
     let args = Readline::parse_env()?;
     let user = whoami::username();
@@ -36,7 +37,7 @@ fn main() -> color_eyre::Result<()> {
 
                 let args = line.split_whitespace();
 
-                if let Err(e) = manager.invoke_cmd(&args.collect::<Vec<&str>>()) {
+                if let Err(e) = manager.invoke_cmd(&args.collect::<Vec<&str>>()).await {
                     eprintln!("Got error: {e:?}")
                 }
             }

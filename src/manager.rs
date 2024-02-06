@@ -1,8 +1,8 @@
-use std::fs::create_dir_all;
-use std::fs::File;
 use std::path::PathBuf;
-use std::process::Child;
-use std::process::Command;
+use tokio::fs::create_dir_all;
+use tokio::fs::read_to_string;
+use tokio::process::Child;
+use tokio::process::Command;
 
 use color_eyre::eyre::Report;
 use cote::*;
@@ -192,7 +192,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn start_server(&self, start: &Start) -> color_eyre::Result<Instance> {
+    pub async fn start_server(&self, start: &Start) -> color_eyre::Result<Instance> {
         let cfg = &self.cfg;
         let bin = start.bin.as_ref().unwrap_or(&self.bin);
         let bin = shellexpand::path::full(bin.as_path())?;
@@ -221,20 +221,20 @@ impl Config {
             cmd.arg("--tcp-fast-open");
         }
         if let Some(out_log) = out_log.parent() {
-            create_dir_all(out_log)?
+            create_dir_all(out_log).await?
         }
         if let Some(err_log) = err_log.parent() {
-            create_dir_all(err_log)?
+            create_dir_all(err_log).await?
         }
         cmd.stdout(
-            File::options()
+            std::fs::File::options()
                 .write(true)
                 .truncate(true)
                 .create(true)
                 .open(out_log)?,
         );
         cmd.stderr(
-            File::options()
+            std::fs::File::options()
                 .write(true)
                 .truncate(true)
                 .create(true)
@@ -292,10 +292,10 @@ impl Config {
                     cmd.arg("-nocomp");
                 }
                 if let Some(kcp_log) = kcp_log.parent() {
-                    create_dir_all(kcp_log)?
+                    create_dir_all(kcp_log).await?
                 }
                 cmd.stderr(
-                    File::options()
+                    std::fs::File::options()
                         .write(true)
                         .truncate(true)
                         .create(true)
@@ -344,18 +344,18 @@ impl Manager {
         self
     }
 
-    pub fn invoke_cmd(&mut self, args: &[&str]) -> color_eyre::Result<()> {
+    pub async fn invoke_cmd(&mut self, args: &[&str]) -> color_eyre::Result<()> {
         let cmd = args
             .first()
             .cloned()
             .ok_or_else(|| color_eyre::Report::msg(format!("Command line too short: {args:?}")))?;
 
         match cmd {
-            Self::LOAD => self.invoke_config_cmd(args),
-            Self::START | Self::START_ST => self.invoke_start_cmd(args),
-            Self::HELP | Self::HELP_ST => self.invoke_help_cmd(args),
-            Self::LIST | Self::LIST_ST => self.invoke_list_cmd(args),
-            Self::KILL => self.invoke_kill_cmd(args),
+            Self::LOAD => self.invoke_config_cmd(args).await,
+            Self::START | Self::START_ST => self.invoke_start_cmd(args).await,
+            Self::HELP | Self::HELP_ST => self.invoke_help_cmd(args).await,
+            Self::LIST | Self::LIST_ST => self.invoke_list_cmd(args).await,
+            Self::KILL => self.invoke_kill_cmd(args).await,
             _ => {
                 eprintln!("Unkonwn command line `{:?}`", args);
                 Ok(())
@@ -363,31 +363,31 @@ impl Manager {
         }
     }
 
-    pub fn invoke_config_cmd(&mut self, args: &[&str]) -> color_eyre::Result<()> {
+    pub async fn invoke_config_cmd(&mut self, args: &[&str]) -> color_eyre::Result<()> {
         let args = Args::from(args.iter().copied());
         let loader = Loader::parse(args)?;
         let path = loader.config.unwrap();
         let path = shellexpand::full(&path)?;
-        let cont = std::fs::read_to_string(&*path)?;
+        let cont = read_to_string(&*path).await?;
 
         self.set_configs(serde_json::from_str(&cont)?);
 
         Ok(())
     }
 
-    pub fn invoke_start_cmd(&mut self, args: &[&str]) -> color_eyre::Result<()> {
+    pub async fn invoke_start_cmd(&mut self, args: &[&str]) -> color_eyre::Result<()> {
         let args = Args::from(args.iter().copied());
         let start = Start::parse(args)?;
         let config = self.configs.get(start.index).ok_or_else(|| {
             Report::msg("Index out of bound, load the configurations using command `config`")
         })?;
 
-        self.instances.push(config.start_server(&start)?);
+        self.instances.push(config.start_server(&start).await?);
 
         Ok(())
     }
 
-    pub fn invoke_help_cmd(&mut self, args: &[&str]) -> color_eyre::Result<()> {
+    pub async fn invoke_help_cmd(&mut self, args: &[&str]) -> color_eyre::Result<()> {
         #[derive(Debug, Cote)]
         #[cote(width = 50, overload)]
         pub struct Help {
@@ -423,7 +423,7 @@ impl Manager {
         Ok(())
     }
 
-    pub fn invoke_list_cmd(&mut self, args: &[&str]) -> color_eyre::Result<()> {
+    pub async fn invoke_list_cmd(&mut self, args: &[&str]) -> color_eyre::Result<()> {
         let args = Args::from(args.iter().copied());
         let list = List::parse(args)?;
 
@@ -441,7 +441,7 @@ impl Manager {
             for inst in self.instances.iter() {
                 table.add_row(Row::from(vec![
                     inst.index.to_string(),
-                    inst.ss.id().to_string(),
+                    inst.ss.id().map(|v| v.to_string()).unwrap_or_default(),
                     format!("{:?}", inst.kcp.as_ref().map(|v| v.id())),
                 ]));
             }
@@ -451,14 +451,16 @@ impl Manager {
         Ok(())
     }
 
-    pub fn invoke_kill_cmd(&mut self, args: &[&str]) -> color_eyre::Result<()> {
+    pub async fn invoke_kill_cmd(&mut self, args: &[&str]) -> color_eyre::Result<()> {
         let args = Args::from(args.iter().copied());
         let kill = Kill::parse(args)?;
 
         if kill.all {
             for inst in self.instances.iter_mut() {
-                inst.ss.kill()?;
-                inst.kcp.as_mut().map(|v| v.kill()).transpose()?;
+                inst.ss.kill().await?;
+                if let Some(kcp) = inst.kcp.as_mut() {
+                    kcp.kill().await?;
+                }
             }
             self.instances.clear();
         } else {
@@ -468,8 +470,10 @@ impl Manager {
                 .get_mut(index)
                 .ok_or_else(|| Report::msg("Index out of bound, no instance found"))?;
 
-            inst.ss.kill()?;
-            inst.kcp.as_mut().map(|v| v.kill()).transpose()?;
+            inst.ss.kill().await?;
+            if let Some(kcp) = inst.kcp.as_mut() {
+                kcp.kill().await?;
+            }
             self.instances.remove(index);
         }
 
