@@ -23,6 +23,7 @@ use serde::Serialize;
 use serde_json::to_string_pretty;
 
 #[derive(PartialEq, Eq, Clone, Copy, Serialize, Deserialize, Debug, Default, CoteVal, CoteOpt)]
+#[coteval(mapstr = Method::new)]
 pub enum Method {
     #[default]
     Blake3ChaCha20Poly1305_2022,
@@ -40,6 +41,23 @@ pub enum Method {
     Plain,
 
     None,
+}
+
+impl Method {
+    pub fn new(val: &str) -> Result<Self, cote::CoteError> {
+        match val {
+            "2022-blake3-chacha20-poly1305" | "Blake3ChaCha20Poly1305_2022" => {
+                Ok(Method::Blake3ChaCha20Poly1305_2022)
+            }
+            "aes-128-gcm" | "Aes128" => Ok(Self::Aes128),
+            "aes-256-gcm" | "Aes256" => Ok(Self::Aes256),
+            "chacha20-ietf-poly1305" | "ChaCha20IetfFPoly1305" => Ok(Self::ChaCha20IetfFPoly1305),
+            "2022-blake3-aes-128-gcm" | "Blake3Aes128_2022" => Ok(Self::Blake3Aes128_2022),
+            "2022-blake3-aes-256-gcm" | "Blake3Aes256_2022" => Ok(Self::Blake3Aes256_2022),
+            "plain" | "Plain" => Ok(Self::Plain),
+            _ => Ok(Self::None),
+        }
+    }
 }
 
 impl ToString for Method {
