@@ -222,8 +222,25 @@ impl Config {
             let path = &*config;
 
             cmd.arg("-c").arg(path.to_str().unwrap_or_default());
+
+            #[derive(Clone, Serialize, Deserialize, Debug, Default)]
+            pub struct LocalConfig {
+                server: String,
+
+                #[serde(rename = "server_port")]
+                port: u32,
+
+                password: String,
+
+                timeout: u32,
+
+                method: String,
+
+                fast_open: bool,
+            }
+
             // read port
-            let ss_config: SsConfig = serde_json::from_str(&read_to_string(path).await?)?;
+            let ss_config: LocalConfig = serde_json::from_str(&read_to_string(path).await?)?;
 
             ss_port = ss_config.port;
         } else {
