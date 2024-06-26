@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crate::manager::{KcpMode, Method};
-use cote::*;
+use cote::prelude::*;
 
 #[derive(Debug, Cote)]
 #[cote(width = 50, overload)]

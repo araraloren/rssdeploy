@@ -6,7 +6,7 @@ mod start;
 
 use std::path::PathBuf;
 
-use cote::*;
+use cote::prelude::*;
 use manager::Manager;
 use rustyline::{error::ReadlineError, DefaultEditor};
 
@@ -52,18 +52,4 @@ async fn main() -> color_eyre::Result<()> {
     }
     rl.save_history(&args.history)?;
     Ok(())
-}
-
-#[macro_export]
-macro_rules! ss_display_help {
-    ($type:ty, $internal:tt) => {{
-        let mut parser = <$type>::into_parser()?;
-        let mut policy = <$type>::into_policy();
-        let internal = $internal {
-            parser: Some(&mut parser),
-            policy: Some(&mut policy),
-        };
-
-        internal.display_help()?;
-    }};
 }

@@ -5,17 +5,12 @@ use tokio::process::Child;
 use tokio::process::Command;
 
 use color_eyre::eyre::Report;
-use cote::*;
+use cote::prelude::*;
 
 use crate::kill::Kill;
-use crate::kill::KillInternalApp;
 use crate::list::List;
-use crate::list::ListInternalApp;
 use crate::load::Loader;
-use crate::load::LoaderInternalApp;
-use crate::ss_display_help;
 use crate::start::Start;
-use crate::start::StartInternalApp;
 use prettytable::Row;
 use prettytable::Table;
 use serde::Deserialize;
@@ -44,7 +39,7 @@ pub enum Method {
 }
 
 impl Method {
-    pub fn new(val: &str) -> Result<Self, cote::CoteError> {
+    pub fn new(val: &str) -> cote::Result<Self> {
         match val {
             "2022-blake3-chacha20-poly1305" | "Blake3ChaCha20Poly1305_2022" => {
                 Ok(Method::Blake3ChaCha20Poly1305_2022)
@@ -455,19 +450,29 @@ impl Manager {
 
         match res.command.as_str() {
             Self::START | Self::START_ST => {
-                ss_display_help!(Start, StartInternalApp);
+                let parser = Start::into_parser()?;
+
+                parser.display_help_ctx(Start::new_help_context())?;
             }
             Self::LOAD => {
-                ss_display_help!(Loader, LoaderInternalApp);
+                let parser = Loader::into_parser()?;
+
+                parser.display_help_ctx(Loader::new_help_context())?;
             }
             Self::HELP | Self::HELP_ST => {
-                ss_display_help!(Help, HelpInternalApp);
+                let parser = Help::into_parser()?;
+
+                parser.display_help_ctx(Help::new_help_context())?;
             }
             Self::KILL => {
-                ss_display_help!(Kill, KillInternalApp);
+                let parser = Kill::into_parser()?;
+
+                parser.display_help_ctx(Kill::new_help_context())?;
             }
             Self::LIST | Self::LIST_ST => {
-                ss_display_help!(List, ListInternalApp);
+                let parser = List::into_parser()?;
+
+                parser.display_help_ctx(List::new_help_context())?;
             }
             _ => {
                 println!("Available commands: start, load, list, kill, help. Try help <Command>")

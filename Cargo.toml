@@ -12,7 +12,7 @@ categories = ["command-line-interface"]
 
 [dependencies]
 color-eyre = "0.6"
-cote = "0.4"
+cote = "0.5"
 prettytable-rs = "0.10.0"
 rustyline = "12.0"
 serde = { version = "1.0", features = ["derive"] }
