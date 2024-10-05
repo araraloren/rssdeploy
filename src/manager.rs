@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::path::PathBuf;
 use tokio::fs::create_dir_all;
 use tokio::fs::read_to_string;
@@ -55,18 +56,22 @@ impl Method {
     }
 }
 
-impl ToString for Method {
-    fn to_string(&self) -> String {
-        String::from(match self {
-            Method::Blake3ChaCha20Poly1305_2022 => "2022-blake3-chacha20-poly1305",
-            Method::Aes128 => "aes-128-gcm",
-            Method::Aes256 => "aes-256-gcm",
-            Method::ChaCha20IetfFPoly1305 => "chacha20-ietf-poly1305",
-            Method::Blake3Aes128_2022 => "2022-blake3-aes-128-gcm",
-            Method::Blake3Aes256_2022 => "2022-blake3-aes-256-gcm",
-            Method::Plain => "plain",
-            Method::None => "none",
-        })
+impl Display for Method {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Method::Blake3ChaCha20Poly1305_2022 => "2022-blake3-chacha20-poly1305",
+                Method::Aes128 => "aes-128-gcm",
+                Method::Aes256 => "aes-256-gcm",
+                Method::ChaCha20IetfFPoly1305 => "chacha20-ietf-poly1305",
+                Method::Blake3Aes128_2022 => "2022-blake3-aes-128-gcm",
+                Method::Blake3Aes256_2022 => "2022-blake3-aes-256-gcm",
+                Method::Plain => "plain",
+                Method::None => "none",
+            }
+        )
     }
 }
 
@@ -100,15 +105,19 @@ pub enum KcpMode {
     Manual,
 }
 
-impl ToString for KcpMode {
-    fn to_string(&self) -> String {
-        String::from(match self {
-            KcpMode::Fast3 => "fast3",
-            KcpMode::Fast2 => "fast2",
-            KcpMode::Fast => "fast",
-            KcpMode::Normal => "normal",
-            KcpMode::Manual => "manual",
-        })
+impl Display for KcpMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                KcpMode::Fast3 => "fast3",
+                KcpMode::Fast2 => "fast2",
+                KcpMode::Fast => "fast",
+                KcpMode::Normal => "normal",
+                KcpMode::Manual => "manual",
+            }
+        )
     }
 }
 
@@ -142,23 +151,27 @@ pub enum Crypt {
     None,
 }
 
-impl ToString for Crypt {
-    fn to_string(&self) -> String {
-        String::from(match self {
-            Crypt::Aes => "Aes",
-            Crypt::Aes128 => "Aes128",
-            Crypt::Aes192 => "Aes192",
-            Crypt::Salsa20 => "Salsa20",
-            Crypt::BlowFish => "BlowFish",
-            Crypt::TwoFish => "TwoFish",
-            Crypt::Cast5 => "Cast5",
-            Crypt::Des3 => "3Des",
-            Crypt::Tea => "Tea",
-            Crypt::XTea => "XTea",
-            Crypt::Xor => "Xor",
-            Crypt::Sm4 => "Sm4",
-            Crypt::None => "None",
-        })
+impl Display for Crypt {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Crypt::Aes => "Aes",
+                Crypt::Aes128 => "Aes128",
+                Crypt::Aes192 => "Aes192",
+                Crypt::Salsa20 => "Salsa20",
+                Crypt::BlowFish => "BlowFish",
+                Crypt::TwoFish => "TwoFish",
+                Crypt::Cast5 => "Cast5",
+                Crypt::Des3 => "3Des",
+                Crypt::Tea => "Tea",
+                Crypt::XTea => "XTea",
+                Crypt::Xor => "Xor",
+                Crypt::Sm4 => "Sm4",
+                Crypt::None => "None",
+            }
+        )
     }
 }
 
@@ -295,7 +308,7 @@ impl Config {
 
         if start.enable_kcp {
             if let Some(cfg) = &self.kcp_cfg {
-                let bin = &self.kcp;
+                let bin = start.kcp.as_ref().unwrap_or(&self.kcp);
                 let bin = shellexpand::path::full(bin.as_path())?;
                 let mut cmd = Command::new(&*bin);
 
