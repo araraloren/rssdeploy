@@ -4,7 +4,7 @@ Deploy the shadowsocks server
 
 # install
 
-`cargo install --git https://github.com/araraloren/rssdeploy`
+cargo install rssdeploy
 
 # usage
 
@@ -12,10 +12,11 @@ Deploy the shadowsocks server
 screen
 touch history.txt
 rssdeploy
+help cmds
 help load
 load
 ls -l
 help start
-start -k 0
+start 0 -k -c ~/config_ss.json
 ls 
 ```
