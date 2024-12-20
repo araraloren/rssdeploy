@@ -1,6 +1,6 @@
 [package]
 name = "rssdeploy"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2021"
 license = "MPL-2.0"
 authors = [
@@ -14,9 +14,9 @@ categories = ["command-line-interface"]
 
 [dependencies]
 color-eyre = "0.6"
-cote = "0.6"
+cote = "0.9"
 prettytable-rs = "0.10.0"
-rustyline = "14.0"
+rustyline = "15.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 shellexpand = { version = "3.1.0", features = [
