@@ -1,4 +1,2 @@
 #V2
 help
-help cmd
-help start

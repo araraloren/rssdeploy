@@ -5,7 +5,7 @@
         "err_log": "/var/log/shadowsocks/config_0_err.log",
         "out_log": "/var/log/shadowsocks/config_0_out.log",
         "kcp_log": "/var/log/shadowsocks/config_0_kcp.log",
-        "cfg": {
+        "ss_cfg": {
             "server": "0.0.0.0",
             "server_port": 0,
             "password": "password",
@@ -33,7 +33,7 @@
         "err_log": "/var/log/shadowsocks/config_1_err.log",
         "out_log": "/var/log/shadowsocks/config_1_out.log",
         "kcp_log": "/var/log/shadowsocks/config_1_kcp.log",
-        "cfg": {
+        "ss_cfg": {
             "server": "0.0.0.0",
             "server_port": 1,
             "password": "32 bytes base64 password",
