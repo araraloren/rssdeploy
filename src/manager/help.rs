@@ -1,4 +1,3 @@
-use cote::aopt::prelude::Cmd;
 use cote::prelude::*;
 
 use super::{kill::Kill, list::List, load::Load, start::Start, AppContext};
@@ -6,43 +5,30 @@ use super::{kill::Kill, list::List, load::Load, start::Start, AppContext};
 #[derive(Debug, Cote)]
 #[cote(aborthelp, width = 50, overload, notexit)]
 pub struct Help {
-    /// Show help message of kill command
-    #[cmd()]
-    kill: Cmd,
-
-    /// Show help message of list command
-    #[cmd()]
-    list: Cmd,
-
-    /// Show help message of load command
-    #[cmd()]
-    load: Cmd,
-
-    /// Show help message of start command
-    #[cmd()]
-    start: Cmd,
+    /// Show help message of given command
+    #[pos()]
+    name: String,
 }
 
 impl Help {
     pub async fn invoke_cmd(&self, _ac: &mut AppContext) -> color_eyre::Result<()> {
-        if self.kill.0 {
-            let parser = Kill::into_parser()?;
+        let cmds = [
+            ("kill", Kill::into_parser()?, Kill::new_help_context()),
+            ("list", List::into_parser()?, List::new_help_context()),
+            ("load", Load::into_parser()?, Load::new_help_context()),
+            ("start", Start::into_parser()?, Start::new_help_context()),
+        ];
 
-            parser.display_help_ctx(Kill::new_help_context().with_name("kill"))?;
-        } else if self.list.0 {
-            let parser = List::into_parser()?;
-
-            parser.display_help_ctx(List::new_help_context().with_name("list"))?;
-        } else if self.load.0 {
-            let parser = Load::into_parser()?;
-
-            parser.display_help_ctx(Load::new_help_context().with_name("load"))?;
-        } else if self.start.0 {
-            let parser = Start::into_parser()?;
-
-            parser.display_help_ctx(Start::new_help_context().with_name("start"))?;
+        for (name, parser, help_ctx) in &cmds {
+            if &self.name == name {
+                parser.display_help_ctx(help_ctx.clone())?;
+                return Ok(());
+            }
         }
 
-        Ok(())
+        Err(color_eyre::Report::msg(format!(
+            "Available commands are: {}",
+            cmds.iter().map(|v| v.0).collect::<Vec<_>>().join(", ")
+        )))
     }
 }
