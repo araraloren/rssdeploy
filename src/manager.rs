@@ -32,26 +32,26 @@ pub struct AppContext {
 }
 
 #[derive(Debug, Default, Cote)]
-#[cote(aborthelp, width = 50, overload, notexit)]
+#[cote(shellcomp, aborthelp, width = 50, overload, notexit)]
 pub struct Manager {
     /// List the instances or configurations
     #[sub(alias = "ls")]
     list: Option<List>,
 
     /// Kill instance by id
-    #[sub()]
+    #[sub(scvalues)]
     kill: Option<Kill>,
 
     /// Load deploy configurations from *.json
-    #[sub(alias = "ld")]
+    #[sub(alias = "ld", scvalues)]
     load: Option<Load>,
 
     /// Start instance by id or configuration path
-    #[sub(alias = "st")]
+    #[sub(alias = "st", scvalues)]
     start: Option<Start>,
 
     /// Display the help of given command
-    #[sub()]
+    #[sub(scvalues)]
     help: Option<Help>,
 }
 

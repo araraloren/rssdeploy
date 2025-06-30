@@ -4,7 +4,7 @@ use prettytable::{Row, Table};
 use super::AppContext;
 
 #[derive(Debug, Cote)]
-#[cote(aborthelp, width = 50, overload, notexit)]
+#[cote(shellcomp, aborthelp, width = 50, overload, notexit)]
 pub struct List {
     /// Instead, list the configuration
     #[arg(alias = "-l")]

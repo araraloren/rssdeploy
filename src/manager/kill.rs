@@ -3,7 +3,7 @@ use cote::prelude::*;
 use super::AppContext;
 
 #[derive(Debug, Cote)]
-#[cote(aborthelp, width = 50, overload, notexit)]
+#[cote(shellcomp, aborthelp, width = 50, overload, notexit)]
 pub struct Kill {
     /// Kill all shadowsocks instance
     pub all: bool,

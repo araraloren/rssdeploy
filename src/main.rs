@@ -1,11 +1,15 @@
 pub mod config;
+pub mod helper;
 pub mod manager;
+pub mod splitted;
 
 use std::path::PathBuf;
 
 use cote::prelude::*;
 use manager::{AppContext, Manager};
-use rustyline::{error::ReadlineError, DefaultEditor};
+use rustyline::{error::ReadlineError, Editor};
+
+use crate::helper::DeployHelper;
 
 #[derive(Debug, Cote)]
 #[cote(help, aborthelp)]
@@ -20,8 +24,9 @@ impl DeployCli {
         let prompt = format!("♫|{}|>", user);
 
         let mut ctx = AppContext::default();
-        let mut rl = DefaultEditor::new()?;
+        let mut rl = Editor::<DeployHelper, _>::new()?;
 
+        rl.set_helper(Some(DeployHelper::default()));
         if let Some(path) = &self.history {
             if let Err(e) = rl.load_history(path) {
                 eprintln!("WARN! Failed load history file `{}`: {e:?}", path.display());
@@ -34,9 +39,10 @@ impl DeployCli {
                 Ok(line) => {
                     rl.add_history_entry(line.clone())?;
 
-                    if let Err(e) =
-                        Manager::invoke_cmd(line.split_whitespace().collect(), &mut ctx).await
-                    {
+                    let splitted = splitted::Splitted::new(&line);
+                    let args = splitted.split_args(None).args;
+
+                    if let Err(e) = Manager::invoke_cmd(args, &mut ctx).await {
                         eprintln!("Got error: {e:?}")
                     }
                 }

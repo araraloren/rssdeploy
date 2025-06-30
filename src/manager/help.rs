@@ -3,10 +3,10 @@ use cote::prelude::*;
 use super::{kill::Kill, list::List, load::Load, start::Start, AppContext};
 
 #[derive(Debug, Cote)]
-#[cote(aborthelp, width = 50, overload, notexit)]
+#[cote(shellcomp, aborthelp, width = 50, overload, notexit)]
 pub struct Help {
     /// Show help message of given command
-    #[pos()]
+    #[pos(scvalues = ["kill", "list", "load", "start"])]
     name: String,
 }
 
@@ -21,7 +21,7 @@ impl Help {
 
         for (name, parser, help_ctx) in &cmds {
             if &self.name == name {
-                parser.display_help_ctx(help_ctx.clone())?;
+                parser.display(help_ctx.clone())?;
                 return Ok(());
             }
         }

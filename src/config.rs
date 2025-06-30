@@ -1,7 +1,7 @@
 use std::fmt::Display;
 use std::path::PathBuf;
 
-use cote::aopt::raise_error;
+use cote::prelude::error;
 use cote::prelude::CoteOpt;
 use cote::prelude::CoteVal;
 use serde::Deserialize;
@@ -100,7 +100,7 @@ impl<'a> TryFrom<&'a str> for Method {
             "2022-blake3-aes-128-gcm" | "Blake3Aes128_2022" => Ok(Self::Blake3Aes128_2022),
             "2022-blake3-aes-256-gcm" | "Blake3Aes256_2022" => Ok(Self::Blake3Aes256_2022),
             "plain" | "Plain" => Ok(Self::Plain),
-            _ => Err(raise_error!("Unknown crypt method: {}", val)),
+            _ => Err(error!("Unknown crypt method: {}", val)),
         }
     }
 }

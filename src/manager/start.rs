@@ -10,7 +10,7 @@ use crate::config::{KcpMode, Method, SsConfig};
 use super::AppContext;
 
 #[derive(Debug, Cote)]
-#[cote(aborthelp, width = 50, overload, notexit)]
+#[cote(shellcomp, aborthelp, width = 50, overload, notexit)]
 pub struct Start {
     /// Set the path of ssserver
     #[arg(valid = valid!(|v: &PathBuf| v.exists()))]

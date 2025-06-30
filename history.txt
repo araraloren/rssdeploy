@@ -1,2 +1,13 @@
 #V2
 help
+ls opt
+ls  
+ls  \\ qwe
+ls --al 
+ls 
+ls "what are you"
+ls  "wreaw"
+ls 
+ls --local
+help list
+ls -h
