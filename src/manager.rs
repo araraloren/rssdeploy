@@ -31,6 +31,16 @@ pub struct AppContext {
     pub insts: Vec<SsInstance>,
 }
 
+#[derive(Debug, Clone)]
+pub enum Request {
+    FetchInstanceId,
+}
+
+#[derive(Debug, Clone)]
+pub enum Reply {
+    InstanceId(Vec<usize>),
+}
+
 #[derive(Debug, Default, Cote)]
 #[cote(shellcomp, aborthelp, width = 50, overload, notexit)]
 pub struct Manager {

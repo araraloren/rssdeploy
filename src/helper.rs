@@ -1,6 +1,9 @@
 use std::ffi::OsString;
 use std::marker::PhantomData;
+use std::sync::Arc;
+use std::sync::Mutex;
 
+use cote::prelude::SetValueFindExt;
 use cote::shell::shell::Complete;
 use cote::shell::shell::Shell;
 use cote::shell::CompletionManager;
@@ -15,9 +18,12 @@ use rustyline::Hinter;
 use rustyline::Validator;
 
 use crate::manager::Manager;
+use crate::manager::Reply;
+use crate::manager::Request;
+use crate::proxy::Client;
 use crate::splitted::Splitted;
 
-#[derive(Default, Helper, Completer, Highlighter, Hinter, Validator)]
+#[derive(Helper, Completer, Highlighter, Hinter, Validator)]
 pub struct DeployHelper {
     #[rustyline(Completer)]
     completer: DeployCompleter,
@@ -29,8 +35,23 @@ pub struct DeployHelper {
     validator: MatchingBracketValidator,
 }
 
-#[derive(Debug, Default)]
-pub struct DeployCompleter {}
+impl DeployHelper {
+    pub fn new(proxy: Client<Reply, Request>) -> Self {
+        Self {
+            completer: DeployCompleter {
+                proxy: Arc::new(Mutex::new(proxy)),
+            },
+            hinter: (),
+            highlighter: MatchingBracketHighlighter::default(),
+            validator: MatchingBracketValidator::default(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct DeployCompleter {
+    proxy: Arc<Mutex<Client<Reply, Request>>>,
+}
 
 impl Completer for DeployCompleter {
     type Candidate = String;
@@ -81,6 +102,27 @@ impl Completer for DeployCompleter {
             let mut shell = DeployShell::new();
 
             let _ = Manager::inject_completion_values(&mut manager);
+
+            // set values of kill id
+            if let Ok(kill) = manager.find_manager_mut("kill") {
+                let proxy = self.proxy.clone();
+                let idlist = std::thread::spawn(move || {
+                    proxy.lock().unwrap().req_sync(Request::FetchInstanceId)
+                })
+                .join()
+                .unwrap();
+
+                if let Ok(Reply::InstanceId(ids)) = idlist {
+                    if let Ok(index_uid) = kill.parser().find_uid("--index") {
+                        kill.set_values(
+                            index_uid,
+                            ids.into_iter()
+                                .map(|v| OsString::from(v.to_string()))
+                                .collect::<Vec<_>>(),
+                        );
+                    }
+                }
+            }
 
             if manager.complete(&mut shell, &mut context).is_ok() {
                 return Ok(((replace + 1).min(pos), shell.w));
