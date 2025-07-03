@@ -9,12 +9,12 @@ use std::path::PathBuf;
 use cote::prelude::*;
 use manager::{AppContext, Manager};
 use rustyline::{error::ReadlineError, Editor};
-use tokio::{runtime::Handle, select, sync::mpsc::channel};
+use tokio::{spawn, sync::mpsc::channel, task::spawn_blocking};
 
 use crate::{
     helper::DeployHelper,
     manager::{Reply, Request},
-    proxy::proxy,
+    proxy::{proxy, Server},
 };
 
 #[derive(Debug, Cote)]
@@ -25,10 +25,11 @@ pub struct DeployCli {
 }
 
 #[derive(Debug)]
-pub enum Readline {
+pub enum Message {
     Interrupted,
     Line(String),
     Report(String),
+    Request(Request),
 }
 
 impl DeployCli {
@@ -37,93 +38,98 @@ impl DeployCli {
         let prompt = format!("♫|{}|>", user);
 
         let mut ctx = AppContext::default();
-        let mut rl = Editor::<DeployHelper, _>::new()?;
-        let (proxy_cli, mut proxy) = proxy::<Reply, Request>(32);
+        let mut readline = Editor::<DeployHelper, _>::new()?;
+        let (
+            proxy_cli,
+            Server {
+                send: proxy_tx,
+                recv: mut proxy_rx,
+            },
+        ) = proxy::<Reply, Request>(32);
         let history = self.history.clone();
-        let handle = Handle::current();
 
-        rl.set_helper(Some(DeployHelper::new(proxy_cli)));
+        readline.set_helper(Some(DeployHelper::new(proxy_cli)));
         if let Some(path) = &self.history {
-            if let Err(e) = rl.load_history(path) {
+            if let Err(e) = readline.load_history(path) {
                 eprintln!("WARN! Failed load history file `{}`: {e:?}", path.display());
             }
         }
 
-        let (send, mut recv) = channel(32);
+        let (rl_start_tx, mut rl_start_rx) = channel::<()>(16);
+        let (req_server_tx, mut message_rx) = channel(32);
+        let readline_tx = req_server_tx.clone();
 
         // start readline in background
-        std::thread::spawn(move || {
-            handle.block_on(async move {
-                let mut rl = rl;
-                let history = history;
+        spawn_blocking(move || {
+            let history = history;
 
-                loop {
-                    let ret = rl.readline(&prompt);
+            while let Some(()) = rl_start_rx.blocking_recv() {
+                let ret = readline.readline(&prompt);
 
-                    match ret {
-                        Ok(line) => {
-                            rl.add_history_entry(line.clone())?;
-                            send.send(Readline::Line(line)).await?;
-                        }
-                        Err(ReadlineError::Interrupted) => {
-                            send.send(Readline::Interrupted).await?;
-                        }
-                        Err(e) => {
-                            send.send(Readline::Report(format!("Got error: {:?}", e)))
-                                .await?;
+                match ret {
+                    Ok(line) => {
+                        let line = line.trim().to_string();
+
+                        if !line.is_empty() {
+                            readline.add_history_entry(line.clone())?;
+                            readline_tx.blocking_send(Message::Line(line))?;
                         }
                     }
-                    if let Some(path) = &history {
-                        rl.save_history(path)?;
+                    Err(ReadlineError::Interrupted) => {
+                        readline_tx.blocking_send(Message::Interrupted)?;
+                        break;
+                    }
+                    Err(e) => {
+                        readline_tx
+                            .blocking_send(Message::Report(format!("Got error: {:?}", e)))?;
                     }
                 }
+            }
 
-                #[allow(unreachable_code)]
-                Ok::<_, color_eyre::Report>(())
-            })?;
+            if let Some(path) = &history {
+                readline.save_history(path)?;
+            }
 
             Ok::<_, color_eyre::Report>(())
         });
 
-        // process line
-        let process_line = async |line: String, ctx: &mut AppContext| -> color_eyre::Result<()> {
-            let splitted = splitted::Splitted::new(&line);
-            let args = splitted.split_args(None).args;
-
-            if let Err(e) = Manager::invoke_cmd(args, ctx).await {
-                eprintln!("Got error: {e:?}")
+        // start a task process server request
+        spawn(async move {
+            while let Some(msg) = proxy_rx.recv().await {
+                req_server_tx.send(Message::Request(msg)).await?;
             }
-            Ok(())
-        };
+            Ok::<_, color_eyre::Report>(())
+        });
 
-        // process msg
-        let process_msg = async |req: Request, ctx: &AppContext| -> color_eyre::Result<Reply> {
-            match req {
-                Request::FetchInstanceId => Ok(Reply::InstanceId(
-                    ctx.insts.iter().map(|v| v.id).collect::<Vec<_>>(),
-                )),
-            }
-        };
-
+        // process message
         loop {
-            select! {
-                Some(msg) = recv.recv() => {
-                    match msg {
-                    Readline::Line(line) => process_line(line, &mut ctx).await?,
-                    Readline::Interrupted => {
+            rl_start_tx.send(()).await?;
+            if let Some(msg) = message_rx.recv().await {
+                match msg {
+                    Message::Line(line) => {
+                        let splitted = splitted::Splitted::new(&line);
+                        let args = splitted.split_args(None).args;
+
+                        if let Err(e) = Manager::invoke_cmd(args, &mut ctx).await {
+                            eprintln!("Got error: {e:?}")
+                        }
+                    }
+                    Message::Interrupted => {
                         break;
-                    },
-                    Readline::Report(msg) => {
+                    }
+                    Message::Report(msg) => {
                         eprintln!("{}", msg);
+                    }
+                    Message::Request(req) => match req {
+                        Request::FetchInstanceId => {
+                            proxy_tx
+                                .send(Reply::InstanceId(
+                                    ctx.insts.iter().map(|v| v.id).collect::<Vec<_>>(),
+                                ))
+                                .await?;
+                        }
                     },
                 }
-                },
-                Some(msg) = proxy.recv.recv() => {
-                    let reply = process_msg(msg, &ctx).await?;
-
-                    proxy.send.send(reply).await?;
-                },
-                else => {},
             }
         }
 

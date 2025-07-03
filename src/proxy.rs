@@ -48,40 +48,6 @@ pub struct Server<C, S> {
     pub recv: Receiver<S>,
 }
 
-impl<S, C> Server<C, S> {
-    pub fn reply_sync<H>(&mut self, handler: H) -> Result<()>
-    where
-        H: FnOnce(S) -> Result<C>,
-    {
-        let msg = self
-            .recv
-            .blocking_recv()
-            .ok_or_else(|| error!("can not receive msg "))?;
-
-        self.send
-            .blocking_send(handler(msg)?)
-            .map_err(|e| error!("send msg failed: {e:?}"))?;
-        Ok(())
-    }
-
-    pub async fn reply<H>(&mut self, handler: H) -> Result<()>
-    where
-        H: AsyncFnOnce(S) -> Result<C>,
-    {
-        let msg = self
-            .recv
-            .recv()
-            .await
-            .ok_or_else(|| error!("can not receive msg "))?;
-
-        self.send
-            .send(handler(msg).await?)
-            .await
-            .map_err(|e| error!("send msg failed: {e:?}"))?;
-        Ok(())
-    }
-}
-
 pub fn proxy<C, S>(size: usize) -> (Client<C, S>, Server<C, S>) {
     let (client_send, client_recv) = channel(size);
     let (server_send, server_recv) = channel(size);
