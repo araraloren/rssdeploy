@@ -79,8 +79,8 @@ impl DeployCli {
 
                         if !line.is_empty() {
                             readline.add_history_entry(line.clone())?;
-                            readline_tx.blocking_send(Message::Line(line))?;
                         }
+                        readline_tx.blocking_send(Message::Line(line))?;
                     }
                     Err(ReadlineError::Interrupted) => {
                         readline_tx.blocking_send(Message::Interrupted)?;
