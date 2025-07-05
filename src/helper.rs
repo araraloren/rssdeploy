@@ -125,7 +125,7 @@ impl Completer for DeployCompleter {
             }
 
             if manager.complete(&mut shell, &mut context).is_ok() {
-                return Ok(((replace + 1).min(pos), shell.w));
+                return Ok(((replace).min(pos), shell.w));
             }
         }
 
