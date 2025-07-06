@@ -143,6 +143,11 @@ impl DeployCli {
                                 ))
                                 .await?;
                         }
+                        Request::FetchTaskIndex => {
+                            proxy_tx
+                                .send(Reply::TaskIndex((0..ctx.cfgs.len()).collect::<Vec<_>>()))
+                                .await?;
+                        }
                     },
                 }
             }

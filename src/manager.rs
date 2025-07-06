@@ -34,11 +34,15 @@ pub struct AppContext {
 #[derive(Debug, Clone)]
 pub enum Request {
     FetchInstanceId,
+
+    FetchTaskIndex,
 }
 
 #[derive(Debug, Clone)]
 pub enum Reply {
     InstanceId(Vec<usize>),
+
+    TaskIndex(Vec<usize>),
 }
 
 #[derive(Debug, Default, Cote)]

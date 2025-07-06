@@ -1,9 +1,12 @@
+use std::ffi::OsString;
 use std::fmt::Display;
 use std::path::PathBuf;
 
 use cote::prelude::error;
 use cote::prelude::CoteOpt;
 use cote::prelude::CoteVal;
+use cote::shell::value::repeat_values;
+use cote::shell::value::Values;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -124,6 +127,25 @@ impl Display for Method {
     }
 }
 
+impl Method {
+    pub fn values<O>() -> impl Values<O, Err = cote::Error> {
+        repeat_values(|_| {
+            Ok([
+                Self::Blake3ChaCha20Poly1305_2022,
+                Self::Aes128,
+                Self::Aes256,
+                Self::ChaCha20IetfFPoly1305,
+                Self::Blake3Aes128_2022,
+                Self::Blake3Aes256_2022,
+                Self::Plain,
+                Self::None,
+            ]
+            .map(|v| OsString::from(v.to_string()))
+            .to_vec())
+        })
+    }
+}
+
 #[derive(PartialEq, Eq, Clone, Copy, Serialize, Deserialize, Debug, Default, CoteVal, CoteOpt)]
 pub enum KcpMode {
     Fast3,
@@ -151,6 +173,22 @@ impl Display for KcpMode {
                 KcpMode::Manual => "manual",
             }
         )
+    }
+}
+
+impl KcpMode {
+    pub fn values<O>() -> impl Values<O, Err = cote::Error> {
+        repeat_values(|_| {
+            Ok([
+                Self::Fast,
+                Self::Fast2,
+                Self::Fast3,
+                Self::Manual,
+                Self::Normal,
+            ]
+            .map(|v| OsString::from(v.to_string()))
+            .to_vec())
+        })
     }
 }
 
@@ -205,5 +243,29 @@ impl Display for Crypt {
                 Crypt::None => "None",
             }
         )
+    }
+}
+
+impl Crypt {
+    pub fn values<O>() -> impl Values<O, Err = cote::Error> {
+        repeat_values(|_| {
+            Ok([
+                Self::Aes,
+                Self::Aes128,
+                Self::Aes192,
+                Self::Salsa20,
+                Self::BlowFish,
+                Self::TwoFish,
+                Self::Cast5,
+                Self::Des3,
+                Self::Tea,
+                Self::XTea,
+                Self::Xor,
+                Self::Sm4,
+                Self::None,
+            ]
+            .map(|v| OsString::from(v.to_string()))
+            .to_vec())
+        })
     }
 }

@@ -3,6 +3,8 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 use std::sync::Mutex;
 
+use cote::prelude::Args;
+use cote::prelude::PolicyParser;
 use cote::prelude::SetValueFindExt;
 use cote::shell::shell::Complete;
 use cote::shell::shell::Shell;
@@ -86,7 +88,7 @@ impl Completer for DeployCompleter {
             .collect();
         let def = OsString::default();
 
-        if let Ok(parser) = Manager::into_parser() {
+        if let Ok(mut parser) = Manager::into_parser() {
             // +1 for extra "rssdeploy"
             let cword = cword.map(|v| v + 1).unwrap_or(args.len());
             let curr = args.get(cword).unwrap_or(&def);
@@ -96,6 +98,10 @@ impl Completer for DeployCompleter {
             // println!("curr = {prev:?}");
             // println!("curr = {cword:?}");
             // println!("curr = {args:?}");
+            let mut policy = Manager::into_policy().with_prepolicy(true);
+
+            // process args before completion
+            let _ = parser.parse_policy(Args::from(&args), &mut policy);
 
             let mut context = Context::new(&args, curr, prev, cword);
             let mut manager = CompletionManager::new(parser);
@@ -117,6 +123,28 @@ impl Completer for DeployCompleter {
                         kill.set_values(
                             index_uid,
                             ids.into_iter()
+                                .map(|v| OsString::from(v.to_string()))
+                                .collect::<Vec<_>>(),
+                        );
+                    }
+                }
+            }
+
+            // set values of start index
+            if let Ok(start) = manager.find_manager_mut("start") {
+                let proxy = self.proxy.clone();
+                let indexlist = std::thread::spawn(move || {
+                    proxy.lock().unwrap().req_sync(Request::FetchTaskIndex)
+                })
+                .join()
+                .unwrap();
+
+                if let Ok(Reply::InstanceId(indices)) = indexlist {
+                    if let Ok(index_uid) = start.parser().find_uid("index") {
+                        start.set_values(
+                            index_uid,
+                            indices
+                                .into_iter()
                                 .map(|v| OsString::from(v.to_string()))
                                 .collect::<Vec<_>>(),
                         );

@@ -33,7 +33,7 @@ pub struct Start {
     pub timeout: Option<u32>,
 
     /// Set the timeout of ssserver
-    #[arg(alias = "-t")]
+    #[arg(alias = "-t", scvalues = Method::values())]
     pub method: Option<Method>,
 
     /// Enable fast open for ssserver
@@ -58,30 +58,31 @@ pub struct Start {
     pub listen: Option<u32>,
 
     /// Set send windows size
-    #[arg(alias = "-sw", value = 2048u32)]
+    #[arg(alias = "-sw", value = 2048u32, scvalues = ["2048"])]
     pub send_wnd: Option<u32>,
 
     /// Set receive windows size
-    #[arg(alias = "-rw", value = 2048u32)]
+    #[arg(alias = "-rw", value = 2048u32, scvalues = ["2048"])]
     pub recv_wnd: Option<u32>,
 
     /// Set mtu value
-    #[arg(value = 1400u32)]
+    #[arg(value = 1400u32, scvalues = ["1400"])]
     pub mtu: Option<u32>,
 
     /// Set dscp value
-    #[arg(value = 46u32)]
+    #[arg(value = 46u32, scvalues = ["46"])]
     pub dscp: Option<u32>,
 
     /// Set datashard value
-    #[arg(alias = "-ds", value = 30u32)]
+    #[arg(alias = "-ds", value = 30u32, scvalues = ["30"])]
     pub data_shard: Option<u32>,
 
     /// Set parityshard value
-    #[arg(alias = "-ps", value = 15u32)]
+    #[arg(alias = "-ps", value = 15u32, scvalues = ["15"])]
     pub parity_shard: Option<u32>,
 
     /// Set kcptun mode
+    #[arg(scvalues = KcpMode::values())]
     pub mode: Option<KcpMode>,
 
     /// Enable compress mode
