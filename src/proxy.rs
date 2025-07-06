@@ -4,12 +4,6 @@ use tokio::sync::mpsc::channel;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
 
-#[derive(Debug, Clone, Copy)]
-pub struct ClientMode;
-
-#[derive(Debug, Clone, Copy)]
-pub struct ServerMode;
-
 #[derive(Debug)]
 pub struct Client<C, S> {
     send: Sender<S>,
