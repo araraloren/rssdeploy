@@ -1,5 +1,8 @@
+use std::env::current_dir;
 use std::ffi::OsString;
+use std::fs::read_dir;
 use std::marker::PhantomData;
+use std::path::Path;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -8,6 +11,8 @@ use cote::prelude::PolicyParser;
 use cote::prelude::SetValueFindExt;
 use cote::shell::shell::Complete;
 use cote::shell::shell::Shell;
+use cote::shell::value::repeat_values;
+use cote::shell::value::Values;
 use cote::shell::CompletionManager;
 use cote::shell::Context;
 use rustyline::completion::Completer;
@@ -103,11 +108,24 @@ impl Completer for DeployCompleter {
             // process args before completion
             let _ = parser.parse_policy(Args::from(&args), &mut policy);
 
+            let start = parser.take_val::<crate::manager::Start>("start").ok();
+            let start_user_config = start.and_then(|v| v.config.map(|v| v.display().to_string()));
+
+            let load = parser.take_val::<crate::manager::Load>("load").ok();
+            let load_user_config = load.and_then(|v| v.config);
+
             let mut context = Context::new(&args, curr, prev, cword);
             let mut manager = CompletionManager::new(parser);
             let mut shell = DeployShell::new();
 
             let _ = Manager::inject_completion_values(&mut manager);
+
+            // set values of load configurations
+            if let Ok(load) = manager.find_manager_mut("load") {
+                if let Ok(config_uid) = load.parser().find_uid("--config") {
+                    load.set_values(config_uid, load_json_completion(load_user_config));
+                }
+            }
 
             // set values of kill id
             if let Ok(kill) = manager.find_manager_mut("kill") {
@@ -150,6 +168,14 @@ impl Completer for DeployCompleter {
                         );
                     }
                 }
+                if let Ok(config_uid) = start.parser().find_uid("--config") {
+                    start.set_values(config_uid, json_completion(start_user_config));
+                }
+            }
+
+            // if current is empty string, complete at next index
+            if curr.is_empty() {
+                replace += 1;
             }
 
             if manager.complete(&mut shell, &mut context).is_ok() {
@@ -242,4 +268,105 @@ impl<O> Shell<O, Vec<String>> for DeployShell<O> {
     fn take_buff(&mut self) -> Option<Vec<String>> {
         Some(std::mem::take(&mut self.w))
     }
+}
+
+pub fn json_completion<O>(val: Option<String>) -> impl Values<O, Err = cote::Error> {
+    file_completion(vec![], val, |v| {
+        v.extension().and_then(|v| v.to_str()) == Some("json")
+    })
+}
+
+pub fn load_json_completion<O>(val: Option<String>) -> impl Values<O, Err = cote::Error> {
+    file_completion(
+        vec![OsString::from(crate::manager::DEFAULT_CONFIG)],
+        val,
+        |v| v.extension().and_then(|v| v.to_str()) == Some("json"),
+    )
+}
+
+pub fn file_completion<O>(
+    init: Vec<OsString>,
+    dir: Option<String>,
+    filter: impl Fn(&Path) -> bool + 'static,
+) -> impl Values<O, Err = cote::Error> {
+    repeat_values(move |_| {
+        let mut vals = init.clone();
+
+        // search .json in current working directory
+        if let Some(paths) = dir.as_ref().and_then(|v| complete_all(v).ok()) {
+            vals.extend(paths.into_iter().map(OsString::from));
+        } else if let Ok(read_dir) = current_dir().and_then(std::fs::read_dir) {
+            for entry in read_dir {
+                if let Ok(path) = entry.map(|v| v.path()) {
+                    if filter(&path) {
+                        if let Some(filename) = path.file_name() {
+                            let filename = filename.to_os_string();
+
+                            if !vals.contains(&filename) {
+                                vals.push(filename);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(vals)
+    })
+}
+
+pub fn complete_all(val: &str) -> color_eyre::Result<Vec<String>> {
+    complete_path_with(val, |_| true)
+}
+
+pub fn complete_files(val: &str) -> color_eyre::Result<Vec<String>> {
+    complete_path_with(val, |v| v.is_file())
+}
+
+pub fn complete_path_with(
+    val: &str,
+    filter: impl Fn(&Path) -> bool,
+) -> color_eyre::Result<Vec<String>> {
+    let mut rets = vec![];
+    let dst = Path::new(val);
+
+    if dst.exists() && dst.is_dir() {
+        let read_dir = std::fs::read_dir(dst)?;
+
+        for entry in read_dir {
+            if let Ok(path) = entry.map(|v| v.path()) {
+                if filter(&path) {
+                    rets.push(path.display().to_string());
+                }
+            }
+        }
+    } else if !dst.exists() {
+        if let Some(left) = dst.parent() {
+            let path = left.display().to_string();
+
+            if let Some(right) = dst.file_name() {
+                let prefix = right.as_encoded_bytes();
+                let expand = shellexpand::full(&path)?;
+                let expand = Path::new(expand.as_ref());
+
+                if expand.exists() && expand.is_dir() {
+                    for entry in read_dir(expand)?.flatten() {
+                        let path = entry.path();
+
+                        if filter(&path) {
+                            if let Some(filename) = path.file_name() {
+                                if filename.as_encoded_bytes().starts_with(prefix) {
+                                    rets.push(left.join(filename).display().to_string());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    //println!("compelte {val} -> {rets:?}");
+
+    Ok(rets)
 }

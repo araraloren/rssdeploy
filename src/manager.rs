@@ -12,8 +12,10 @@ use crate::config::DeployConfig;
 
 use kill::Kill;
 use list::List;
-use load::Load;
-use start::Start;
+
+pub use load::Load;
+pub use load::DEFAULT_CONFIG;
+pub use start::Start;
 
 #[derive(Debug)]
 pub struct SsInstance {
