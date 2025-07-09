@@ -204,7 +204,7 @@ impl Start {
                 let kcp_log = kcp_log.and_then(|v| shellexpand::path::full(v).ok());
 
                 cmd.arg("-l")
-                    .arg(format!(":{}", kcp_port))
+                    .arg(format!(":{kcp_port}"))
                     .arg("-t")
                     .arg(kcp_server)
                     .arg("-crypt")

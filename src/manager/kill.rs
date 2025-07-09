@@ -1,3 +1,4 @@
+use color_eyre::eyre::eyre;
 use cote::prelude::*;
 
 use super::AppContext;
@@ -10,31 +11,27 @@ pub struct Kill {
 
     /// Kill given shadowsocks instance
     #[arg(alias = "-i", value = 0usize)]
-    pub index: Option<usize>,
+    pub id: Option<usize>,
 }
 
 impl Kill {
-    pub async fn invoke_cmd(&self, ac: &mut AppContext) -> color_eyre::Result<()> {
-        if self.all {
-            for inst in ac.insts.iter_mut() {
-                inst.ss.kill().await?;
-                if let Some(kcp) = inst.kcp.as_mut() {
-                    kcp.kill().await?;
-                }
-            }
-            ac.insts.clear();
-        } else {
-            let index = self.index.unwrap();
-            let inst = ac
-                .insts
-                .get_mut(index)
-                .ok_or_else(|| color_eyre::Report::msg("Index out of bound, no instance found"))?;
-
+    pub async fn invoke_cmd(&self, ctx: &mut AppContext) -> color_eyre::Result<()> {
+        for inst in ctx
+            .insts
+            .iter_mut()
+            .filter(|v| self.all || Some(v.id) == self.id)
+        {
             inst.ss.kill().await?;
             if let Some(kcp) = inst.kcp.as_mut() {
                 kcp.kill().await?;
             }
-            ac.insts.remove(index);
+        }
+        if self.all {
+            ctx.insts.clear();
+        } else if let Some(index) = ctx.insts.iter().position(|v| Some(v.id) == self.id) {
+            ctx.insts.remove(index);
+        } else if let Some(index) = self.id {
+            return Err(eyre!("Invalid id `{index}`, no instance found"));
         }
 
         Ok(())

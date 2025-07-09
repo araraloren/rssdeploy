@@ -58,7 +58,7 @@ impl DeployCli {
         // start readline in background
         let background_rl_handler = spawn_blocking(move || {
             let user = whoami::username();
-            let prompt = format!("♫|{}|>", user);
+            let prompt = format!("♫|{user}|>");
 
             readline.set_helper(Some(DeployHelper::new(proxy_cli)));
             if let Some(path) = &history {
@@ -87,8 +87,7 @@ impl DeployCli {
                         break;
                     }
                     Err(e) => {
-                        readline_tx
-                            .blocking_send(Message::Report(format!("Got error: {:?}", e)))?;
+                        readline_tx.blocking_send(Message::Report(format!("Got error: {e:?}")))?;
                     }
                 }
             }
@@ -133,7 +132,7 @@ impl DeployCli {
                     }
                     Message::Report(msg) => {
                         ready_readline = true;
-                        eprintln!("{}", msg);
+                        eprintln!("{msg}");
                     }
                     Message::Request(req) => match req {
                         Request::FetchInstanceId => {

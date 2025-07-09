@@ -137,7 +137,7 @@ impl Completer for DeployCompleter {
                 .unwrap();
 
                 if let Ok(Reply::InstanceId(ids)) = idlist {
-                    if let Ok(index_uid) = kill.parser().find_uid("--index") {
+                    if let Ok(index_uid) = kill.parser().find_uid("--id") {
                         kill.set_values(
                             index_uid,
                             ids.into_iter()

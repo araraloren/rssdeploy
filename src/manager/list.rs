@@ -16,7 +16,7 @@ impl List {
         if self.local {
             println!("-------------------CONFIG------------------------");
             for (index, cfg) in ac.cfgs.iter().enumerate() {
-                println!("INDEX: {}", index);
+                println!("INDEX: {index}");
                 println!("{}", serde_json::to_string_pretty(cfg)?);
                 println!("-----------------------------------------------");
             }
